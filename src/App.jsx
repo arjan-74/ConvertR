@@ -17,9 +17,13 @@ const extMap = {
   mp3: 'aud', wav: 'aud', flac: 'aud', ogg: 'aud', m4a: 'aud',
 }
 
-const typeLabels = { doc: 'DOC', img: 'IMG', vid: 'VID', data: 'DATA', aud: 'AUD' }
-const typeColors = { doc: '#1a6fc4', img: '#2e7d32', vid: '#c62828', data: '#e65100', aud: '#4527a0' }
-const typeBg = { doc: '#e3f0fb', img: '#e8f5e9', vid: '#fdecea', data: '#fff3e0', aud: '#ede7f6' }
+const typeMeta = {
+  doc: { label: 'DOC', bg: '#dbeafe', color: '#1d4ed8', icon: '📄' },
+  img: { label: 'IMG', bg: '#dcfce7', color: '#15803d', icon: '🖼️' },
+  vid: { label: 'VID', bg: '#fee2e2', color: '#b91c1c', icon: '🎬' },
+  data: { label: 'DATA', bg: '#ffedd5', color: '#c2410c', icon: '📊' },
+  aud: { label: 'AUD', bg: '#ede9fe', color: '#6d28d9', icon: '🎵' },
+}
 
 function getType(name) {
   const ext = name.split('.').pop().toLowerCase()
@@ -32,7 +36,7 @@ function fmtSize(bytes) {
   return (bytes / 1048576).toFixed(1) + ' MB'
 }
 
-function App() {
+export default function App() {
   const [files, setFiles] = useState([])
   const [converting, setConverting] = useState(false)
   const [dragOver, setDragOver] = useState(false)
@@ -44,6 +48,7 @@ function App() {
       file: f,
       status: 'pending',
       spec: '',
+      format: formatOptions[getType(f.name)][0],
     }))
     setFiles(prev => [...prev, ...entries])
   }
@@ -56,12 +61,16 @@ function App() {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, spec: val } : f))
   }
 
+  function updateFormat(id, val) {
+    setFiles(prev => prev.map(f => f.id === id ? { ...f, format: val } : f))
+  }
+
   async function startConversion() {
     if (files.length === 0 || converting) return
     setConverting(true)
     for (let i = 0; i < files.length; i++) {
       setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'converting' } : f))
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 600))
+      await new Promise(r => setTimeout(r, 1000 + Math.random() * 800))
       setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done' } : f))
     }
     setConverting(false)
@@ -72,101 +81,149 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <span className="logo">Convertr<span className="logo-dot">.app</span></span>
-        <span className="beta-badge">beta</span>
-      </header>
+      {/* Background blobs */}
+      <div className="blob blob-1" />
+      <div className="blob blob-2" />
+      <div className="blob blob-3" />
 
-      {/* Drop Zone */}
-      <div
-        className={`drop-zone ${dragOver ? 'drag-over' : ''}`}
-        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={e => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files) }}
-      >
-        <div className="drop-icon">⬆</div>
-        <p className="drop-label">Drop any files here</p>
-        <p className="drop-sub">PDF, DOCX, MP4, PNG, CSV, MP3 and 100+ more</p>
-        <button className="browse-btn" onClick={() => inputRef.current.click()}>
-          Browse files
-        </button>
-        <input ref={inputRef} type="file" multiple style={{ display: 'none' }}
-          onChange={e => addFiles(e.target.files)} />
-      </div>
-
-      {/* Queue */}
-      {files.length > 0 && (
-        <div className="queue-section">
-          <p className="section-label">Conversion queue</p>
-
-          <div className="queue-header-row">
-            <span></span>
-            <span className="col-label">File</span>
-            <span className="col-label">Target format</span>
-            <span className="col-label">AI spec</span>
-            <span></span>
+      <div className="container">
+        {/* Header */}
+        <header className="header">
+          <div className="header-left">
+            <div className="logo-mark">C</div>
+            <span className="logo-text">Convertr</span>
+            <span className="logo-suffix">.app</span>
           </div>
+          <span className="beta-pill">beta</span>
+        </header>
 
-          {files.map(f => {
-            const type = getType(f.file.name)
-            const opts = formatOptions[type] || formatOptions.doc
-            return (
-              <div className="queue-item" key={f.id}>
-                <div className="file-icon" style={{ background: typeBg[type], color: typeColors[type] }}>
-                  {typeLabels[type]}
-                </div>
-                <div className="file-info">
-                  <p className="file-name">{f.file.name}</p>
-                  <p className="file-meta">
-                    {fmtSize(f.file.size)} &nbsp;·&nbsp;
-                    <span className={`status-dot ${f.status}`}></span>
-                    {f.status === 'converting' ? 'converting…' : f.status}
-                  </p>
-                </div>
-                <select className="format-select" disabled={converting}>
-                  {opts.map(o => <option key={o}>{o}</option>)}
-                </select>
-                <input
-                  className="spec-input"
-                  placeholder='e.g. "compress for web"'
-                  value={f.spec}
-                  disabled={converting}
-                  onChange={e => updateSpec(f.id, e.target.value)}
-                />
-                <button className="remove-btn" onClick={() => removeFile(f.id)} disabled={converting}>✕</button>
-              </div>
-            )
-          })}
-
-          {/* Actions */}
-          <div className="action-row">
-            <button className="convert-btn" onClick={startConversion} disabled={converting}>
-              {converting ? 'Converting…' : '⚡ Convert all'}
-            </button>
-          </div>
-
-          {/* Stats */}
-          <div className="stats-row">
-            <div className="stat-card">
-              <p className="stat-label">Files queued</p>
-              <p className="stat-value">{files.length}</p>
-            </div>
-            <div className="stat-card">
-              <p className="stat-label">Converted</p>
-              <p className="stat-value">{done}</p>
-            </div>
-            <div className="stat-card">
-              <p className="stat-label">Progress</p>
-              <p className="stat-value">{pct}%</p>
-              <div className="progress-wrap">
-                <div className="progress-bar" style={{ width: pct + '%' }}></div>
-              </div>
-            </div>
-          </div>
+        {/* Hero */}
+        <div className="hero">
+          <h1 className="hero-title">
+            Convert <span className="gradient-text">anything</span><br />
+            to anything
+          </h1>
+          <p className="hero-sub">
+            Drop your files, describe what you want in plain English,<br />
+            and let AI handle the rest.
+          </p>
         </div>
-      )}
+
+        {/* Drop Zone */}
+        <div
+          className={`drop-zone ${dragOver ? 'drag-over' : ''}`}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={e => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files) }}
+          onClick={() => inputRef.current.click()}
+        >
+          <div className="drop-inner">
+            <div className="drop-icon-wrap">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <p className="drop-label">Drop files here or <span className="drop-link">browse</span></p>
+            <p className="drop-sub">PDF · DOCX · MP4 · PNG · CSV · MP3 · and 100+ more</p>
+            <div className="type-pills">
+              {['Documents', 'Images', 'Video', 'Audio', 'Data'].map(t => (
+                <span key={t} className="type-pill">{t}</span>
+              ))}
+            </div>
+          </div>
+          <input ref={inputRef} type="file" multiple style={{ display: 'none' }}
+            onChange={e => addFiles(e.target.files)} />
+        </div>
+
+        {/* Queue */}
+        {files.length > 0 && (
+          <div className="queue-wrap">
+            <div className="queue-title-row">
+              <p className="queue-title">Conversion queue</p>
+              <span className="queue-count">{files.length} file{files.length !== 1 ? 's' : ''}</span>
+            </div>
+
+            <div className="queue-list">
+              {files.map(f => {
+                const type = getType(f.file.name)
+                const meta = typeMeta[type]
+                const opts = formatOptions[type]
+                return (
+                  <div className={`queue-card ${f.status}`} key={f.id}>
+                    <div className="file-badge" style={{ background: meta.bg, color: meta.color }}>
+                      <span className="file-badge-icon">{meta.icon}</span>
+                      <span className="file-badge-label">{meta.label}</span>
+                    </div>
+                    <div className="file-info">
+                      <p className="file-name">{f.file.name}</p>
+                      <p className="file-meta">{fmtSize(f.file.size)}</p>
+                    </div>
+                    <div className="file-controls">
+                      <select
+                        className="format-select"
+                        value={f.format}
+                        disabled={converting}
+                        onChange={e => updateFormat(f.id, e.target.value)}
+                      >
+                        {opts.map(o => <option key={o}>{o}</option>)}
+                      </select>
+                      <input
+                        className="spec-input"
+                        placeholder='AI spec: "compress for web", "translate to French"…'
+                        value={f.spec}
+                        disabled={converting}
+                        onChange={e => updateSpec(f.id, e.target.value)}
+                      />
+                    </div>
+                    <div className="file-right">
+                      <div className={`status-badge ${f.status}`}>
+                        {f.status === 'pending' && '○ Pending'}
+                        {f.status === 'converting' && '◌ Converting'}
+                        {f.status === 'done' && '✓ Done'}
+                      </div>
+                      <button className="remove-btn" onClick={() => removeFile(f.id)} disabled={converting}>✕</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Actions + Stats */}
+            <div className="bottom-row">
+              <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
+                {converting
+                  ? <><span className="spin">◌</span> Converting…</>
+                  : <><span>⚡</span> Convert all</>}
+              </button>
+
+              <div className="stats">
+                <div className="stat">
+                  <span className="stat-num">{files.length}</span>
+                  <span className="stat-lbl">queued</span>
+                </div>
+                <div className="stat-divider" />
+                <div className="stat">
+                  <span className="stat-num">{done}</span>
+                  <span className="stat-lbl">done</span>
+                </div>
+                <div className="stat-divider" />
+                <div className="stat">
+                  <span className="stat-num">{pct}%</span>
+                  <span className="stat-lbl">progress</span>
+                </div>
+              </div>
+            </div>
+
+            {files.length > 0 && (
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: pct + '%' }} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
-
-export default App
