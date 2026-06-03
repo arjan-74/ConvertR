@@ -68,11 +68,37 @@ export default function App() {
   async function startConversion() {
     if (files.length === 0 || converting) return
     setConverting(true)
+
     for (let i = 0; i < files.length; i++) {
-      setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'converting' } : f))
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 800))
-      setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done' } : f))
+      const f = files[i]
+      setFiles(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'converting' } : item))
+
+      try {
+        const formData = new FormData()
+        formData.append('file', f.file)
+        formData.append('target_format', f.format)
+        formData.append('spec', f.spec)
+
+        const response = await fetch('http://localhost:8000/convert', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const outputName = f.file.name.rsplit
+          ? f.file.name.rsplit('.', 1)[0] + '.' + f.format.toLowerCase()
+          : f.file.name + '.' + f.format.toLowerCase()
+
+        setFiles(prev => prev.map((item, idx) => idx === i
+          ? { ...item, status: 'done', downloadUrl, outputName }
+          : item
+        ))
+      } catch (err) {
+        setFiles(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'error' } : item))
+      }
     }
+
     setConverting(false)
   }
 
@@ -182,7 +208,17 @@ export default function App() {
                         {f.status === 'pending' && '○ Pending'}
                         {f.status === 'converting' && '◌ Converting'}
                         {f.status === 'done' && '✓ Done'}
+                        {f.status === 'error' && '✕ Error'}
                       </div>
+                      {f.status === 'done' && f.downloadUrl && (
+    
+                          className="download-btn"
+                          href={f.downloadUrl}
+                          download={f.outputName}
+                        >
+                          ↓ Download
+                        </a>
+                      )}
                       <button className="remove-btn" onClick={() => removeFile(f.id)} disabled={converting}>✕</button>
                     </div>
                   </div>
