@@ -4,24 +4,31 @@ from fastapi.responses import FileResponse
 import subprocess
 import tempfile
 import os
-import shutil
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "https://convert-r-web.vercel.app"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-SUPPORTED = {
-    "pdf": "pandoc", "docx": "pandoc", "html": "pandoc",
-    "txt": "pandoc", "md": "pandoc",
-    "mp4": "ffmpeg", "mp3": "ffmpeg", "wav": "ffmpeg",
-    "gif": "ffmpeg", "webm": "ffmpeg", "mov": "ffmpeg",
-    "png": "ffmpeg", "jpg": "ffmpeg", "webp": "ffmpeg",
-}
+SOFFICE = r"C:\Program Files\LibreOffice\program\soffice.exe"
+
+LIBREOFFICE_FORMATS = {'pdf', 'docx', 'doc', 'odt', 'html', 'txt', 'pptx', 'xlsx'}
+FFMPEG_FORMATS = {'mp4', 'mp3', 'wav', 'gif', 'webm', 'mov', 'avi', 'flac', 'ogg', 'm4a', 'png', 'jpg', 'jpeg', 'webp'}
+PANDOC_FORMATS = {'md', 'rst', 'latex', 'epub'}
+
+def get_engine(source_ext, target_ext):
+    if target_ext in FFMPEG_FORMATS and source_ext in FFMPEG_FORMATS:
+        return 'ffmpeg'
+    if target_ext in PANDOC_FORMATS or source_ext in PANDOC_FORMATS:
+        return 'pandoc'
+    if target_ext in LIBREOFFICE_FORMATS or source_ext in LIBREOFFICE_FORMATS:
+        return 'libreoffice'
+    return None
 
 @app.get("/")
 def root():
@@ -33,39 +40,47 @@ async def convert(
     target_format: str = Form("pdf"),
     spec: str = Form("")
 ):
-    ext = file.filename.split(".")[-1].lower()
-    engine = SUPPORTED.get(target_format.lower())
+    source_ext = file.filename.split(".")[-1].lower()
+    target_ext = target_format.lower()
+    engine = get_engine(source_ext, target_ext)
 
     if not engine:
-        return {"error": f"Target format '{target_format}' not supported yet"}
+        return {"error": f"Conversion from {source_ext} to {target_ext} not supported yet"}
 
     tmp_dir = tempfile.mkdtemp()
     input_path = os.path.join(tmp_dir, file.filename)
-    output_filename = file.filename.rsplit(".", 1)[0] + "." + target_format.lower()
+    base_name = file.filename.rsplit(".", 1)[0]
+    output_filename = base_name + "." + target_ext
     output_path = os.path.join(tmp_dir, output_filename)
 
     with open(input_path, "wb") as f:
         f.write(await file.read())
 
     try:
-        if engine == "pandoc":
-            subprocess.run(
-                ["pandoc", input_path, "-o", output_path],
-                check=True
-            )
-        elif engine == "ffmpeg":
-            subprocess.run(
-                ["ffmpeg", "-i", input_path, output_path, "-y"],
-                check=True
-            )
+        if engine == 'libreoffice':
+            subprocess.run([
+                SOFFICE, "--headless", "--convert-to", target_ext,
+                "--outdir", tmp_dir, input_path
+            ], check=True)
 
-        return FileResponse(
-            output_path,
-            filename=output_filename,
-            media_type="application/octet-stream"
-        )
+        elif engine == 'ffmpeg':
+            subprocess.run([
+                "ffmpeg", "-i", input_path, output_path, "-y"
+            ], check=True)
+
+        elif engine == 'pandoc':
+            subprocess.run([
+                "pandoc", input_path, "-o", output_path
+            ], check=True)
+
+        if os.path.exists(output_path):
+            return FileResponse(
+                output_path,
+                filename=output_filename,
+                media_type="application/octet-stream"
+            )
+        else:
+            return {"error": "Conversion failed - output file not created"}
 
     except subprocess.CalledProcessError as e:
         return {"error": f"Conversion failed: {str(e)}"}
-    finally:
-        pass
