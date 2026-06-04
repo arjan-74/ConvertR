@@ -49,6 +49,8 @@ export default function App() {
       status: 'pending',
       spec: '',
       format: formatOptions[getType(f.name)][0],
+      downloadUrl: null,
+      outputName: null,
     }))
     setFiles(prev => [...prev, ...entries])
   }
@@ -86,9 +88,10 @@ export default function App() {
 
         const blob = await response.blob()
         const downloadUrl = window.URL.createObjectURL(blob)
-        const outputName = f.file.name.rsplit
-          ? f.file.name.rsplit('.', 1)[0] + '.' + f.format.toLowerCase()
-          : f.file.name + '.' + f.format.toLowerCase()
+        const baseName = f.file.name.includes('.')
+          ? f.file.name.substring(0, f.file.name.lastIndexOf('.'))
+          : f.file.name
+        const outputName = baseName + '.' + f.format.toLowerCase()
 
         setFiles(prev => prev.map((item, idx) => idx === i
           ? { ...item, status: 'done', downloadUrl, outputName }
@@ -107,13 +110,11 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Background blobs */}
       <div className="blob blob-1" />
       <div className="blob blob-2" />
       <div className="blob blob-3" />
 
       <div className="container">
-        {/* Header */}
         <header className="header">
           <div className="header-left">
             <div className="logo-mark">C</div>
@@ -123,7 +124,6 @@ export default function App() {
           <span className="beta-pill">beta</span>
         </header>
 
-        {/* Hero */}
         <div className="hero">
           <h1 className="hero-title">
             Convert <span className="gradient-text">anything</span><br />
@@ -135,7 +135,6 @@ export default function App() {
           </p>
         </div>
 
-        {/* Drop Zone */}
         <div
           className={`drop-zone ${dragOver ? 'drag-over' : ''}`}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -163,7 +162,6 @@ export default function App() {
             onChange={e => addFiles(e.target.files)} />
         </div>
 
-        {/* Queue */}
         {files.length > 0 && (
           <div className="queue-wrap">
             <div className="queue-title-row">
@@ -197,7 +195,7 @@ export default function App() {
                       </select>
                       <input
                         className="spec-input"
-                        placeholder='AI spec: "compress for web", "translate to French"…'
+                        placeholder='AI spec: "compress for web", "translate to French"'
                         value={f.spec}
                         disabled={converting}
                         onChange={e => updateSpec(f.id, e.target.value)}
@@ -211,8 +209,8 @@ export default function App() {
                         {f.status === 'error' && '✕ Error'}
                       </div>
                       {f.status === 'done' && f.downloadUrl && (
-    
-                          className="download-btn"
+                        
+                          <a className="download-btn"
                           href={f.downloadUrl}
                           download={f.outputName}
                         >
@@ -226,7 +224,6 @@ export default function App() {
               })}
             </div>
 
-            {/* Actions + Stats */}
             <div className="bottom-row">
               <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
                 {converting
