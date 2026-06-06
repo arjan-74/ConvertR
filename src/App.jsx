@@ -69,6 +69,10 @@ export default function App() {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, format: val } : f))
   }
 
+  await fetch('https://convertr-backend.onrender.com').catch(() => {})
+  await new Promise(r => setTimeout(r, 3000))
+  
+  
   async function startConversion() {
     if (files.length === 0 || converting) return
     setConverting(true)
@@ -83,9 +87,14 @@ export default function App() {
         formData.append('target_format', f.format)
         formData.append('spec', f.spec)
 
-        const response = await fetch('https://convertr-backend.onrender.com/convert', {          method: 'POST',
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 120000)
+        const response = await fetch('https://convertr-backend.onrender.com/convert', {
+          method: 'POST',
           body: formData,
+          signal: controller.signal,
         })
+        clearTimeout(timeout)
 
         const blob = await response.blob()
         const downloadUrl = window.URL.createObjectURL(blob)
