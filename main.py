@@ -16,6 +16,7 @@ app.add_middleware(
 )
 
 SOFFICE = r"C:\Program Files\LibreOffice\program\soffice.exe"
+FFMPEG = r"C:\Users\Dell\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe"
 
 LIBREOFFICE_FORMATS = {'pdf', 'docx', 'doc', 'odt', 'html', 'txt', 'pptx', 'xlsx'}
 FFMPEG_FORMATS = {'mp4', 'mp3', 'wav', 'gif', 'webm', 'mov', 'avi', 'flac', 'ogg', 'm4a', 'png', 'jpg', 'jpeg', 'webp'}
@@ -65,7 +66,7 @@ async def convert(
 
         elif engine == 'ffmpeg':
             subprocess.run([
-                "ffmpeg", "-i", input_path, output_path, "-y"
+                FFMPEG, "-i", input_path, output_path, "-y"
             ], check=True)
 
         elif engine == 'pandoc':
