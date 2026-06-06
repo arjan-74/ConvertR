@@ -69,13 +69,12 @@ export default function App() {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, format: val } : f))
   }
 
-  await fetch('https://convertr-backend.onrender.com').catch(() => {})
-  await new Promise(r => setTimeout(r, 3000))
-  
-  
   async function startConversion() {
     if (files.length === 0 || converting) return
     setConverting(true)
+
+    await fetch('https://convertr-backend.onrender.com').catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
 
     for (let i = 0; i < files.length; i++) {
       const f = files[i]
