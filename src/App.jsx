@@ -12,9 +12,9 @@ const formatOptions = {
 const extMap = {
   pdf: 'doc', doc: 'doc', docx: 'doc', txt: 'doc', md: 'doc', html: 'doc', pptx: 'doc',
   png: 'img', jpg: 'img', jpeg: 'img', gif: 'img', webp: 'img', svg: 'img',
-  mp4: 'vid', mov: 'vid', avi: 'vid', webm: 'vid',
+  mp4: 'vid', mov: 'vid', avi: 'vid', webm: 'vid', mpeg: 'vid', mpg: 'vid', mkv: 'vid', '3gp': 'vid',
   csv: 'data', json: 'data', xlsx: 'data', tsv: 'data',
-  mp3: 'aud', wav: 'aud', flac: 'aud', ogg: 'aud', m4a: 'aud',
+  mp3: 'aud', wav: 'aud', flac: 'aud', ogg: 'aud', m4a: 'aud', aac: 'aud', opus: 'aud', wma: 'aud', aiff: 'aud',
 }
 
 const typeMeta = {
@@ -48,7 +48,9 @@ export default function App() {
       file: f,
       status: 'pending',
       spec: '',
-      format: formatOptions[getType(f.name)][0],
+      format: formatOptions[getType(f.name)].filter(
+        opt => opt.toLowerCase() !== f.name.split('.').pop().toLowerCase()
+      )[0] || formatOptions[getType(f.name)][0],
       downloadUrl: null,
       outputName: null,
     }))
@@ -191,7 +193,9 @@ export default function App() {
                         disabled={converting}
                         onChange={e => updateFormat(f.id, e.target.value)}
                       >
-                        {opts.map(o => <option key={o}>{o}</option>)}
+                        {opts
+                          .filter(o => o.toLowerCase() !== f.file.name.split('.').pop().toLowerCase())
+                          .map(o => <option key={o}>{o}</option>)}
                       </select>
                       <input
                         className="spec-input"
