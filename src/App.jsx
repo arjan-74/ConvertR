@@ -83,7 +83,7 @@ export default function App() {
         formData.append('target_format', f.format)
         formData.append('spec', f.spec)
 
-        const response = await fetch('http://localhost:8000/convert', {
+        const response = await fetch('https://convertr-production.up.railway.app/convert', {
           method: 'POST',
           body: formData,
         })
