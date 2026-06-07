@@ -1,25 +1,34 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 import subprocess
 import tempfile
 import os
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class CORSMiddlewareManual(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            response = JSONResponse(content={})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            return response
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+app.add_middleware(CORSMiddlewareManual)
 
 SOFFICE = "soffice"
 FFMPEG = "ffmpeg"
 
 LIBREOFFICE_FORMATS = {'pdf', 'docx', 'doc', 'odt', 'html', 'txt', 'pptx', 'xlsx'}
-FFMPEG_FORMATS = {'mp4', 'mp3', 'wav', 'gif', 'webm', 'mov', 'avi', 'flac', 'ogg', 'm4a', 'png', 'jpg', 'jpeg', 'webp'}
+FFMPEG_FORMATS = {'mp4', 'mp3', 'wav', 'gif', 'webm', 'mov', 'avi', 'flac', 'ogg', 'm4a', 'png', 'jpg', 'jpeg', 'webp', 'mpeg', 'mpg'}
 PANDOC_FORMATS = {'md', 'rst', 'latex', 'epub'}
 
 def get_engine(source_ext, target_ext):
@@ -46,7 +55,7 @@ async def convert(
     engine = get_engine(source_ext, target_ext)
 
     if not engine:
-        return {"error": f"Conversion from {source_ext} to {target_ext} not supported yet"}
+        return JSONResponse({"error": f"Conversion from {source_ext} to {target_ext} not supported yet"})
 
     tmp_dir = tempfile.mkdtemp()
     input_path = os.path.join(tmp_dir, file.filename)
@@ -63,12 +72,10 @@ async def convert(
                 SOFFICE, "--headless", "--convert-to", target_ext,
                 "--outdir", tmp_dir, input_path
             ], check=True)
-
         elif engine == 'ffmpeg':
             subprocess.run([
                 FFMPEG, "-i", input_path, output_path, "-y"
             ], check=True)
-
         elif engine == 'pandoc':
             subprocess.run([
                 "pandoc", input_path, "-o", output_path
@@ -81,7 +88,7 @@ async def convert(
                 media_type="application/octet-stream"
             )
         else:
-            return {"error": "Conversion failed - output file not created"}
+            return JSONResponse({"error": "Conversion failed - output file not created"})
 
     except subprocess.CalledProcessError as e:
-        return {"error": f"Conversion failed: {str(e)}"}
+        return JSONResponse({"error": f"Conversion failed: {str(e)}"})
