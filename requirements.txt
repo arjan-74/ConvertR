@@ -6,3 +6,4 @@ reportlab
 pymupdf
 Pillow
 openpyxl
+google-generativeai

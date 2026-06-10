@@ -12,9 +12,54 @@ from PIL import Image
 import csv
 import json
 import openpyxl
+import google.generativeai as genai
+import re
 
 app = FastAPI()
 
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+
+@app.post("/analyze-spec")
+async def analyze_spec(
+    filename: str = Form(...),
+    target_format: str = Form(...),
+    spec: str = Form(...),
+    filesize: int = Form(0)
+):
+    if not spec.strip():
+        return JSONResponse({"error": "No spec provided"})
+
+    source_ext = filename.split(".")[-1].lower()
+    
+    prompt = f"""You are a file conversion expert. A user wants to convert a file and has given these instructions.
+
+File: {filename} ({filesize} bytes)
+Converting from: {source_ext} to: {target_format}
+User instruction: "{spec}"
+
+Return ONLY a JSON object with these fields (use null for anything that doesn't apply):
+{{
+  "quality": <0-100 integer or null>,
+  "width": <pixels integer or null>,
+  "height": <pixels integer or null>,
+  "max_size_kb": <integer or null>,
+  "dpi": <integer or null>,
+  "grayscale": <true/false>,
+  "summary": "<one sentence describing what will be done>"
+}}
+
+Only return the JSON, nothing else."""
+
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        text = re.sub(r'```json|```', '', text).strip()
+        settings = json.loads(text)
+        return JSONResponse(settings)
+    except Exception as e:
+        return JSONResponse({"error": f"AI analysis failed: {str(e)}"})
+    
 class CORSMiddlewareManual(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method == "OPTIONS":
