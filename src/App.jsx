@@ -69,6 +69,31 @@ export default function App() {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, format: val } : f))
   }
 
+  async function analyzeSpec(id) {
+    const f = files.find(item => item.id === id)
+    if (!f || !f.spec.trim()) return
+
+    setFiles(prev => prev.map(item => item.id === id ? { ...item, analyzing: true } : item))
+
+    try {
+      const formData = new FormData()
+      formData.append('filename', f.file.name)
+      formData.append('target_format', f.format)
+      formData.append('spec', f.spec)
+      formData.append('filesize', f.file.size)
+
+      const response = await fetch('https://convertr-backend.onrender.com/analyze-spec', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const settings = await response.json()
+      setFiles(prev => prev.map(item => item.id === id ? { ...item, analyzing: false, aiSettings: settings } : item))
+    } catch (err) {
+      setFiles(prev => prev.map(item => item.id === id ? { ...item, analyzing: false } : item))
+    }
+  }
+  
   async function startConversion() {
     if (files.length === 0 || converting) return
     setConverting(true)
@@ -204,13 +229,38 @@ export default function App() {
                           .filter(o => o.toLowerCase() !== f.file.name.split('.').pop().toLowerCase())
                           .map(o => <option key={o}>{o}</option>)}
                       </select>
-                      <input
-                        className="spec-input"
-                        placeholder='AI spec: "compress for web", "translate to French"'
-                        value={f.spec}
-                        disabled={converting}
-                        onChange={e => updateSpec(f.id, e.target.value)}
-                      />
+                      <div className="spec-row">
+                        <input
+                          className="spec-input"
+                          placeholder='AI spec: "compress to 500KB", "make 1080p"'
+                          value={f.spec}
+                          disabled={converting}
+                          onChange={e => updateSpec(f.id, e.target.value)}
+                        />
+                        <button
+                          className="analyze-btn"
+                          onClick={() => analyzeSpec(f.id)}
+                          disabled={converting || !f.spec.trim() || f.analyzing}
+                        >
+                          {f.analyzing ? '...' : '✦ AI'}
+                        </button>
+                      </div>
+                      {f.aiSettings && !f.aiSettings.error && (
+                        <div className="ai-preview">
+                          <p className="ai-preview-title">✦ AI will apply:</p>
+                          <div className="ai-tags">
+                            {f.aiSettings.quality && <span className="ai-tag">Quality: {f.aiSettings.quality}%</span>}
+                            {f.aiSettings.width && f.aiSettings.height && <span className="ai-tag">{f.aiSettings.width}×{f.aiSettings.height}px</span>}
+                            {f.aiSettings.max_size_kb && <span className="ai-tag">Max: {f.aiSettings.max_size_kb}KB</span>}
+                            {f.aiSettings.dpi && <span className="ai-tag">DPI: {f.aiSettings.dpi}</span>}
+                            {f.aiSettings.grayscale && <span className="ai-tag">Grayscale</span>}
+                            {f.aiSettings.summary && <span className="ai-tag ai-summary">{f.aiSettings.summary}</span>}
+                          </div>
+                        </div>
+                      )}
+                      {f.aiSettings?.error && (
+                        <p className="ai-error">{f.aiSettings.error}</p>
+                      )}
                     </div>
                     <div className="file-right">
                       <div className={`status-badge ${f.status}`}>

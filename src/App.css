@@ -308,3 +308,66 @@ body {
 .download-btn:hover {
   background: rgba(99,102,241,0.25);
 }
+
+.spec-row {
+  display: flex;
+  gap: 6px;
+}
+
+.analyze-btn {
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(99,102,241,0.4);
+  background: rgba(99,102,241,0.1);
+  color: #818cf8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.analyze-btn:hover { background: rgba(99,102,241,0.2); }
+.analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ai-preview {
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 4px;
+}
+
+.ai-preview-title {
+  font-size: 11px;
+  color: #818cf8;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.ai-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ai-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(99,102,241,0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99,102,241,0.2);
+}
+
+.ai-summary {
+  background: rgba(99,102,241,0.05);
+  color: #818cf8;
+  font-style: italic;
+}
+
+.ai-error {
+  font-size: 11px;
+  color: #f87171;
+  margin-top: 4px;
+}
