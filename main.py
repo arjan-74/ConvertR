@@ -1,10 +1,17 @@
 from fastapi import FastAPI, UploadFile, File, Form, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import subprocess
 import tempfile
 import os
+from docx import Document
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import fitz
+from PIL import Image
+import csv
+import json
+import openpyxl
 
 app = FastAPI()
 
@@ -24,21 +31,7 @@ class CORSMiddlewareManual(BaseHTTPMiddleware):
 
 app.add_middleware(CORSMiddlewareManual)
 
-SOFFICE = "soffice"
-FFMPEG = "ffmpeg"
-
-LIBREOFFICE_FORMATS = {'pdf', 'docx', 'doc', 'odt', 'html', 'txt', 'pptx', 'xlsx'}
-FFMPEG_FORMATS = {'mp4', 'mp3', 'wav', 'gif', 'webm', 'mov', 'avi', 'flac', 'ogg', 'm4a', 'png', 'jpg', 'jpeg', 'webp', 'mpeg', 'mpg'}
-PANDOC_FORMATS = {'md', 'rst', 'latex', 'epub'}
-
-def get_engine(source_ext, target_ext):
-    if target_ext in FFMPEG_FORMATS and source_ext in FFMPEG_FORMATS:
-        return 'ffmpeg'
-    if target_ext in PANDOC_FORMATS or source_ext in PANDOC_FORMATS:
-        return 'pandoc'
-    if target_ext in LIBREOFFICE_FORMATS or source_ext in LIBREOFFICE_FORMATS:
-        return 'libreoffice'
-    return None
+COMING_SOON = {'mp4', 'mp3', 'wav', 'gif', 'webm', 'mov', 'avi', 'flac', 'ogg', 'm4a', 'mpeg', 'mpg', 'mkv', 'aac', 'opus', 'wma'}
 
 @app.get("/")
 def root():
@@ -52,10 +45,9 @@ async def convert(
 ):
     source_ext = file.filename.split(".")[-1].lower()
     target_ext = target_format.lower()
-    engine = get_engine(source_ext, target_ext)
 
-    if not engine:
-        return JSONResponse({"error": f"Conversion from {source_ext} to {target_ext} not supported yet"})
+    if source_ext in COMING_SOON or target_ext in COMING_SOON:
+        return JSONResponse({"error": "Video and audio conversion coming soon — stay tuned!"})
 
     tmp_dir = tempfile.mkdtemp()
     input_path = os.path.join(tmp_dir, file.filename)
@@ -67,19 +59,95 @@ async def convert(
         f.write(await file.read())
 
     try:
-        if engine == 'libreoffice':
-            subprocess.run([
-                SOFFICE, "--headless", "--convert-to", target_ext,
-                "--outdir", tmp_dir, input_path
-            ], check=True)
-        elif engine == 'ffmpeg':
-            subprocess.run([
-                FFMPEG, "-i", input_path, output_path, "-y"
-            ], check=True)
-        elif engine == 'pandoc':
-            subprocess.run([
-                "pandoc", input_path, "-o", output_path
-            ], check=True)
+        # Image conversions
+        if source_ext in {'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff'} and target_ext in {'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'pdf'}:
+            img = Image.open(input_path)
+            if img.mode in ('RGBA', 'LA', 'P') and target_ext in ('jpg', 'jpeg'):
+                img = img.convert('RGB')
+            if target_ext == 'pdf':
+                img.save(output_path, 'PDF')
+            else:
+                img.save(output_path)
+
+        # DOCX to PDF
+        elif source_ext == 'docx' and target_ext == 'pdf':
+            doc = Document(input_path)
+            c = canvas.Canvas(output_path, pagesize=letter)
+            width, height = letter
+            y = height - 50
+            for para in doc.paragraphs:
+                if y < 50:
+                    c.showPage()
+                    y = height - 50
+                c.drawString(50, y, para.text[:100])
+                y -= 20
+            c.save()
+
+        # PDF to TXT
+        elif source_ext == 'pdf' and target_ext == 'txt':
+            doc = fitz.open(input_path)
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(text)
+
+        # TXT to PDF
+        elif source_ext == 'txt' and target_ext == 'pdf':
+            with open(input_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+            c = canvas.Canvas(output_path, pagesize=letter)
+            width, height = letter
+            y = height - 50
+            for line in lines:
+                if y < 50:
+                    c.showPage()
+                    y = height - 50
+                c.drawString(50, y, line.strip()[:100])
+                y -= 20
+            c.save()
+
+        # CSV to JSON
+        elif source_ext == 'csv' and target_ext == 'json':
+            rows = []
+            with open(input_path, 'r', encoding='utf-8', errors='ignore') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    rows.append(row)
+            with open(output_path, 'w') as f:
+                json.dump(rows, f, indent=2)
+
+        # JSON to CSV
+        elif source_ext == 'json' and target_ext == 'csv':
+            with open(input_path, 'r') as f:
+                data = json.load(f)
+            if isinstance(data, list) and len(data) > 0:
+                with open(output_path, 'w', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=data[0].keys())
+                    writer.writeheader()
+                    writer.writerows(data)
+
+        # CSV to XLSX
+        elif source_ext == 'csv' and target_ext == 'xlsx':
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            with open(input_path, 'r', encoding='utf-8', errors='ignore') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    ws.append(row)
+            wb.save(output_path)
+
+        # XLSX to CSV
+        elif source_ext == 'xlsx' and target_ext == 'csv':
+            wb = openpyxl.load_workbook(input_path)
+            ws = wb.active
+            with open(output_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                for row in ws.iter_rows(values_only=True):
+                    writer.writerow(row)
+
+        else:
+            return JSONResponse({"error": f"Conversion from {source_ext} to {target_ext} not supported yet"})
 
         if os.path.exists(output_path):
             return FileResponse(
@@ -88,7 +156,7 @@ async def convert(
                 media_type="application/octet-stream"
             )
         else:
-            return JSONResponse({"error": "Conversion failed - output file not created"})
+            return JSONResponse({"error": "Conversion failed"})
 
-    except subprocess.CalledProcessError as e:
+    except Exception as e:
         return JSONResponse({"error": f"Conversion failed: {str(e)}"})
