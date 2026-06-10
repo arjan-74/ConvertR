@@ -2,5 +2,5 @@ services:
   - type: web
     name: convertr-backend
     runtime: python
-    buildCommand: apt-get install -y ffmpeg pandoc libreoffice && pip install -r requirements.txt
+    buildCommand: bash build.sh
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
