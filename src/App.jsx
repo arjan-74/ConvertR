@@ -53,6 +53,8 @@ export default function App() {
       )[0] || formatOptions[getType(f.name)][0],
       downloadUrl: null,
       outputName: null,
+      analyzing: false,
+      aiSettings: null,
     }))
     setFiles(prev => [...prev, ...entries])
   }
