@@ -51,7 +51,7 @@ Return ONLY a JSON object with these fields (use null for anything that doesn't 
 Only return the JSON, nothing else."""
 
     try:
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(prompt)
         text = response.text.strip()
         text = re.sub(r'```json|```', '', text).strip()
