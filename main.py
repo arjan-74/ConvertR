@@ -51,7 +51,7 @@ Return ONLY a JSON object with these fields (use null for anything that doesn't 
 Only return the JSON, nothing else."""
 
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        model = genai.GenerativeModel("gemini-pro")
         response = model.generate_content(prompt)
         text = response.text.strip()
         text = re.sub(r'```json|```', '', text).strip()
@@ -82,6 +82,14 @@ COMING_SOON = {'mp4', 'mp3', 'wav', 'gif', 'webm', 'mov', 'avi', 'flac', 'ogg', 
 def root():
     return {"message": "ConvertR backend is running"}
 
+@app.get("/models")
+def list_models():
+    try:
+        models = genai.list_models()
+        return {"models": [m.name for m in models]}
+    except Exception as e:
+        return {"error": str(e)}
+    
 @app.post("/convert")
 async def convert(
     file: UploadFile = File(...),
