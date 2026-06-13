@@ -2,11 +2,11 @@ import { useState, useRef } from 'react'
 import './App.css'
 
 const formatOptions = {
-  doc: ['PDF', 'DOCX', 'HTML', 'Markdown', 'TXT', 'PPTX'],
-  img: ['PNG', 'JPG', 'WebP', 'AVIF', 'SVG', 'PDF'],
-  vid: ['MP4', 'GIF', 'WebM', 'MP3', 'MOV'],
-  data: ['JSON', 'CSV', 'XLSX', 'Parquet', 'SQL', 'TSV'],
-  aud: ['MP3', 'WAV', 'FLAC', 'OGG', 'M4A'],
+  doc: ['PDF', 'DOCX', 'HTML', 'Markdown', 'TXT', 'PPTX', 'ODT', 'RTF', 'EPUB'],
+  img: ['PNG', 'JPG', 'WebP', 'AVIF', 'SVG', 'PDF', 'BMP', 'TIFF'],
+  vid: ['MP4', 'GIF', 'WebM', 'MP3', 'MOV', 'AVI', 'MKV', 'MPEG'],
+  data: ['JSON', 'CSV', 'XLSX', 'Parquet', 'SQL', 'TSV', 'TSV', 'XML', 'YAML'],
+  aud: ['MP3', 'WAV', 'FLAC', 'OGG', 'M4A', 'AAC', 'OPUS'],
 }
 
 const extMap = {
@@ -128,9 +128,10 @@ export default function App() {
           ? f.file.name.substring(0, f.file.name.lastIndexOf('.'))
           : f.file.name
         const outputName = baseName + '.' + f.format.toLowerCase()
+        const convertedSize = blob.size
 
         setFiles(prev => prev.map((item, idx) => idx === i
-          ? { ...item, status: 'done', downloadUrl, outputName }
+          ? { ...item, status: 'done', downloadUrl, outputName, convertedSize }
           : item
         ))
       } catch (err) {
@@ -277,7 +278,7 @@ export default function App() {
                           href={f.downloadUrl}
                           download={f.outputName}
                         >
-                          ↓ Download
+                          ↓ Download {f.convertedSize ? `(${fmtSize(f.convertedSize)})` : ''}
                         </a>
                       )}
                       <button className="remove-btn" onClick={() => removeFile(f.id)} disabled={converting}>✕</button>
