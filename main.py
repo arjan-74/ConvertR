@@ -14,6 +14,7 @@ import json
 import openpyxl
 import google.generativeai as genai
 import re
+from pypdf import PdfWriter, PdfReader
 
 app = FastAPI()
 
@@ -239,3 +240,59 @@ async def convert(
 
     except Exception as e:
         return JSONResponse({"error": f"Conversion failed: {str(e)}"})
+    
+@app.post("/merge")
+async def merge(
+    files: list[UploadFile] = File(...),
+    page_order: str = Form(""),
+):
+    tmp_dir = tempfile.mkdtemp()
+    writer = PdfWriter()
+    input_paths = []
+
+    for file in files:
+        input_path = os.path.join(tmp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            f.write(await file.read())
+        input_paths.append((file.filename, input_path))
+
+    # Parse page order if provided
+    # Format: "file1.pdf:0,1,2|file2.pdf:0,1"
+    page_map = {}
+    if page_order:
+        for part in page_order.split("|"):
+            if ":" in part:
+                fname, pages = part.split(":", 1)
+                page_map[fname] = [int(p) for p in pages.split(",")]
+
+    try:
+        for filename, input_path in input_paths:
+            ext = filename.split(".")[-1].lower()
+
+            # Convert images to PDF first
+            if ext in {'png', 'jpg', 'jpeg', 'webp', 'bmp'}:
+                img = Image.open(input_path)
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                pdf_path = input_path + ".pdf"
+                img.save(pdf_path, 'PDF')
+                input_path = pdf_path
+
+            reader = PdfReader(input_path)
+            pages_to_include = page_map.get(filename, list(range(len(reader.pages))))
+            for page_num in pages_to_include:
+                if page_num < len(reader.pages):
+                    writer.add_page(reader.pages[page_num])
+
+        output_path = os.path.join(tmp_dir, "merged.pdf")
+        with open(output_path, "wb") as f:
+            writer.write(f)
+
+        return FileResponse(
+            output_path,
+            filename="merged.pdf",
+            media_type="application/octet-stream"
+        )
+
+    except Exception as e:
+        return JSONResponse({"error": f"Merge failed: {str(e)}"})

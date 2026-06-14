@@ -7,3 +7,4 @@ pymupdf
 Pillow
 openpyxl
 google-generativeai
+pypdf
