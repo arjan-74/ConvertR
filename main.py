@@ -94,7 +94,12 @@ def list_models():
 async def convert(
     file: UploadFile = File(...),
     target_format: str = Form("pdf"),
-    spec: str = Form("")
+    spec: str = Form(""),
+    ai_quality: str = Form(""),
+    ai_width: str = Form(""),
+    ai_height: str = Form(""),
+    ai_max_size_kb: str = Form(""),
+    ai_grayscale: str = Form("false")
 ):
     source_ext = file.filename.split(".")[-1].lower()
     target_ext = target_format.lower()
@@ -111,32 +116,58 @@ async def convert(
     with open(input_path, "wb") as f:
         f.write(await file.read())
 
+    quality = int(ai_quality) if ai_quality else 85
+    width = int(ai_width) if ai_width else None
+    height = int(ai_height) if ai_height else None
+    max_size_kb = int(ai_max_size_kb) if ai_max_size_kb else None
+    grayscale = ai_grayscale.lower() == 'true'
+
     try:
-        # Image conversions
         if source_ext in {'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff'} and target_ext in {'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'pdf'}:
             img = Image.open(input_path)
-            if img.mode in ('RGBA', 'LA', 'P') and target_ext in ('jpg', 'jpeg'):
+            if grayscale:
+                img = img.convert('L')
+            elif img.mode in ('RGBA', 'LA', 'P') and target_ext in ('jpg', 'jpeg'):
                 img = img.convert('RGB')
+            if width and height:
+                img = img.resize((width, height), Image.LANCZOS)
+            elif width:
+                ratio = width / img.width
+                img = img.resize((width, int(img.height * ratio)), Image.LANCZOS)
+            elif height:
+                ratio = height / img.height
+                img = img.resize((int(img.width * ratio), height), Image.LANCZOS)
             if target_ext == 'pdf':
                 img.save(output_path, 'PDF')
+            elif target_ext in ('jpg', 'jpeg'):
+                img.save(output_path, 'JPEG', quality=quality)
+            elif target_ext == 'webp':
+                img.save(output_path, 'WEBP', quality=quality)
             else:
                 img.save(output_path)
 
-        # DOCX to PDF
+            if max_size_kb and os.path.exists(output_path):
+                current_size = os.path.getsize(output_path) / 1024
+                if current_size > max_size_kb and target_ext in ('jpg', 'jpeg', 'webp'):
+                    q = quality
+                    while current_size > max_size_kb and q > 10:
+                        q -= 5
+                        img.save(output_path, quality=q)
+                        current_size = os.path.getsize(output_path) / 1024
+
         elif source_ext == 'docx' and target_ext == 'pdf':
             doc = Document(input_path)
             c = canvas.Canvas(output_path, pagesize=letter)
-            width, height = letter
-            y = height - 50
+            width_pt, height_pt = letter
+            y = height_pt - 50
             for para in doc.paragraphs:
                 if y < 50:
                     c.showPage()
-                    y = height - 50
+                    y = height_pt - 50
                 c.drawString(50, y, para.text[:100])
                 y -= 20
             c.save()
 
-        # PDF to TXT
         elif source_ext == 'pdf' and target_ext == 'txt':
             doc = fitz.open(input_path)
             text = ""
@@ -145,22 +176,20 @@ async def convert(
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(text)
 
-        # TXT to PDF
         elif source_ext == 'txt' and target_ext == 'pdf':
             with open(input_path, 'r', encoding='utf-8', errors='ignore') as f:
                 lines = f.readlines()
             c = canvas.Canvas(output_path, pagesize=letter)
-            width, height = letter
-            y = height - 50
+            width_pt, height_pt = letter
+            y = height_pt - 50
             for line in lines:
                 if y < 50:
                     c.showPage()
-                    y = height - 50
+                    y = height_pt - 50
                 c.drawString(50, y, line.strip()[:100])
                 y -= 20
             c.save()
 
-        # CSV to JSON
         elif source_ext == 'csv' and target_ext == 'json':
             rows = []
             with open(input_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -170,7 +199,6 @@ async def convert(
             with open(output_path, 'w') as f:
                 json.dump(rows, f, indent=2)
 
-        # JSON to CSV
         elif source_ext == 'json' and target_ext == 'csv':
             with open(input_path, 'r') as f:
                 data = json.load(f)
@@ -180,7 +208,6 @@ async def convert(
                     writer.writeheader()
                     writer.writerows(data)
 
-        # CSV to XLSX
         elif source_ext == 'csv' and target_ext == 'xlsx':
             wb = openpyxl.Workbook()
             ws = wb.active
@@ -190,7 +217,6 @@ async def convert(
                     ws.append(row)
             wb.save(output_path)
 
-        # XLSX to CSV
         elif source_ext == 'xlsx' and target_ext == 'csv':
             wb = openpyxl.load_workbook(input_path)
             ws = wb.active
