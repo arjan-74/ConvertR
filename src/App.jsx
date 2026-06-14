@@ -48,9 +48,7 @@ export default function App() {
       file: f,
       status: 'pending',
       spec: '',
-      format: formatOptions[getType(f.name)].filter(
-        opt => opt.toLowerCase() !== f.name.split('.').pop().toLowerCase()
-      )[0] || formatOptions[getType(f.name)][0],
+      format: f.name.split('.').pop().toUpperCase(),
       downloadUrl: null,
       outputName: null,
       analyzing: false,
@@ -112,6 +110,11 @@ export default function App() {
         formData.append('file', f.file)
         formData.append('target_format', f.format)
         formData.append('spec', f.spec)
+        formData.append('ai_quality', f.aiSettings?.quality || '')
+        formData.append('ai_width', f.aiSettings?.width || '')
+        formData.append('ai_height', f.aiSettings?.height || '')
+        formData.append('ai_max_size_kb', f.aiSettings?.max_size_kb || '')
+        formData.append('ai_grayscale', f.aiSettings?.grayscale || false)
 
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 120000)
@@ -228,9 +231,7 @@ export default function App() {
                         disabled={converting}
                         onChange={e => updateFormat(f.id, e.target.value)}
                       >
-                        {opts
-                          .filter(o => o.toLowerCase() !== f.file.name.split('.').pop().toLowerCase())
-                          .map(o => <option key={o}>{o}</option>)}
+                        {opts.map(o => <option key={o}>{o}</option>)}
                       </select>
                       <div className="spec-row">
                         <input
@@ -252,7 +253,7 @@ export default function App() {
                         <div className="ai-preview">
                           <p className="ai-preview-title">✦ AI will apply:</p>
                           <div className="ai-tags">
-                            {f.aiSettings.quality && <span className="ai-tag">Quality: {f.aiSettings.quality}%</span>}
+                            {f.aiSettings.quality > 0 && <span className="ai-tag">Quality: {f.aiSettings.quality}%</span>}
                             {f.aiSettings.width && f.aiSettings.height && <span className="ai-tag">{f.aiSettings.width}×{f.aiSettings.height}px</span>}
                             {f.aiSettings.max_size_kb && <span className="ai-tag">Max: {f.aiSettings.max_size_kb}KB</span>}
                             {f.aiSettings.dpi && <span className="ai-tag">DPI: {f.aiSettings.dpi}</span>}
