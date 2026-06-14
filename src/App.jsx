@@ -206,7 +206,12 @@ export default function App() {
           <div className="queue-wrap">
             <div className="queue-title-row">
               <p className="queue-title">Conversion queue</p>
-              <span className="queue-count">{files.length} file{files.length !== 1 ? 's' : ''}</span>
+              <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                <span className="queue-count">{files.length} file{files.length !== 1 ? 's' : ''}</span>
+                <button className="clear-btn" onClick={() => setFiles([])} disabled={converting}>
+                  Clear all
+                </button>
+              </div>
             </div>
 
             <div className="queue-list">
