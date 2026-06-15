@@ -40,6 +40,7 @@ export default function App() {
   const [files, setFiles] = useState([])
   const [converting, setConverting] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [mode, setMode] = useState('convert')
   const inputRef = useRef()
 
   function addFiles(newFiles) {
@@ -67,6 +68,41 @@ export default function App() {
 
   function updateFormat(id, val) {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, format: val } : f))
+  }
+
+  function moveFile(index, direction) {
+    setFiles(prev => {
+      const arr = [...prev]
+      const temp = arr[index]
+      arr[index] = arr[index + direction]
+      arr[index + direction] = temp
+      return arr
+    })
+  }
+
+  async function startMerge() {
+    if (files.length < 2 || converting) return
+    setConverting(true)
+    try {
+      const formData = new FormData()
+      files.forEach(f => formData.append('files', f.file))
+      formData.append('page_order', '')
+      const response = await fetch('https://convertr-backend.onrender.com/merge', {
+        method: 'POST',
+        body: formData,
+      })
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'merged.pdf'
+      a.click()
+      window.URL.revokeObjectURL(url)
+      setFiles(prev => prev.map(f => ({ ...f, status: 'done' })))
+    } catch (err) {
+      console.error('Merge failed:', err)
+    }
+    setConverting(false)
   }
 
   async function analyzeSpec(id) {
@@ -175,6 +211,20 @@ export default function App() {
           </p>
         </div>
 
+        <div className="mode-toggle">
+          <button
+            className={`mode-btn ${mode === 'convert' ? 'active' : ''}`}
+            onClick={() => { setMode('convert'); setFiles([]) }}
+          >
+            ⚡ Convert
+          </button>
+          <button
+            className={`mode-btn ${mode === 'merge' ? 'active' : ''}`}
+            onClick={() => { setMode('merge'); setFiles([]) }}
+          >
+            ⊞ Merge
+          </button>
+        </div>
         <div
           className={`drop-zone ${dragOver ? 'drag-over' : ''}`}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
