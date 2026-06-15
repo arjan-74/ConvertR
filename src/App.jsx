@@ -25,10 +25,6 @@ const typeMeta = {
   aud: { label: 'AUD', bg: '#ede9fe', color: '#6d28d9', icon: '🎵' },
 }
 
-const [mode, setMode] = useState('convert') // 'convert' or 'merge'
-
-const [mergeOrder, setMergeOrder] = useState([])
-
 function getType(name) {
   const ext = name.split('.').pop().toLowerCase()
   return extMap[ext] || 'doc'
@@ -65,16 +61,6 @@ export default function App() {
     setFiles(prev => prev.filter(f => f.id !== id))
   }
 
-  function moveFile(index, direction) {
-    setFiles(prev => {
-      const newFiles = [...prev]
-      const temp = newFiles[index]
-      newFiles[index] = newFiles[index + direction]
-      newFiles[index + direction] = temp
-      return newFiles
-    })
-  }
-  
   function updateSpec(id, val) {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, spec: val } : f))
   }
@@ -108,37 +94,6 @@ export default function App() {
     }
   }
   
-async function startMerge() {
-    if (files.length < 2 || converting) return
-    setConverting(true)
-
-    try {
-      const formData = new FormData()
-      files.forEach(f => formData.append('files', f.file))
-      formData.append('page_order', '')
-
-      const response = await fetch('https://convertr-backend.onrender.com/merge', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const blob = await response.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
-
-      const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = 'merged.pdf'
-      a.click()
-      window.URL.revokeObjectURL(downloadUrl)
-
-      setFiles(prev => prev.map(f => ({ ...f, status: 'done' })))
-    } catch (err) {
-      console.error('Merge failed:', err)
-    }
-
-    setConverting(false)
-  }
-
   async function startConversion() {
     if (files.length === 0 || converting) return
     setConverting(true)
@@ -220,21 +175,6 @@ async function startMerge() {
           </p>
         </div>
 
-        <div className="mode-toggle">
-          <button
-            className={`mode-btn ${mode === 'convert' ? 'active' : ''}`}
-            onClick={() => { setMode('convert'); setFiles([]) }}
-          >
-            ⚡ Convert
-          </button>
-          <button
-            className={`mode-btn ${mode === 'merge' ? 'active' : ''}`}
-            onClick={() => { setMode('merge'); setFiles([]) }}
-          >
-            ⊞ Merge
-          </button>
-        </div>
-
         <div
           className={`drop-zone ${dragOver ? 'drag-over' : ''}`}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -275,7 +215,7 @@ async function startMerge() {
             </div>
 
             <div className="queue-list">
-              {files.map((f, index) => {
+              {files.map(f => {
                 const type = getType(f.file.name)
                 const meta = typeMeta[type]
                 const opts = formatOptions[type]
@@ -289,60 +229,48 @@ async function startMerge() {
                       <p className="file-name">{f.file.name}</p>
                       <p className="file-meta">{fmtSize(f.file.size)}</p>
                     </div>
-                    {mode === 'convert' ? (
-                      <div className="file-controls">
-                        <select
-                          className="format-select"
-                          value={f.format}
+                    <div className="file-controls">
+                      <select
+                        className="format-select"
+                        value={f.format}
+                        disabled={converting}
+                        onChange={e => updateFormat(f.id, e.target.value)}
+                      >
+                        {opts.map(o => <option key={o}>{o}</option>)}
+                      </select>
+                      <div className="spec-row">
+                        <input
+                          className="spec-input"
+                          placeholder='AI spec: "compress to 500KB", "make 1080p"'
+                          value={f.spec}
                           disabled={converting}
-                          onChange={e => updateFormat(f.id, e.target.value)}
+                          onChange={e => updateSpec(f.id, e.target.value)}
+                        />
+                        <button
+                          className="analyze-btn"
+                          onClick={() => analyzeSpec(f.id)}
+                          disabled={converting || !f.spec.trim() || f.analyzing}
                         >
-                          {opts.map(o => <option key={o}>{o}</option>)}
-                        </select>
-                        <div className="spec-row">
-                          <input
-                            className="spec-input"
-                            placeholder='AI spec: "compress to 500KB", "make 1080p"'
-                            value={f.spec}
-                            disabled={converting}
-                            onChange={e => updateSpec(f.id, e.target.value)}
-                          />
-                          <button
-                            className="analyze-btn"
-                            onClick={() => analyzeSpec(f.id)}
-                            disabled={converting || !f.spec.trim() || f.analyzing}
-                          >
-                            {f.analyzing ? '...' : '✦ AI'}
-                          </button>
-                        </div>
-                        {f.aiSettings && !f.aiSettings.error && (
-                          <div className="ai-preview">
-                            <p className="ai-preview-title">✦ AI will apply:</p>
-                            <div className="ai-tags">
-                              {f.aiSettings.quality > 0 && <span className="ai-tag">Quality: {f.aiSettings.quality}%</span>}
-                              {f.aiSettings.width && f.aiSettings.height && <span className="ai-tag">{f.aiSettings.width}×{f.aiSettings.height}px</span>}
-                              {f.aiSettings.max_size_kb && <span className="ai-tag">Max: {f.aiSettings.max_size_kb}KB</span>}
-                              {f.aiSettings.dpi && <span className="ai-tag">DPI: {f.aiSettings.dpi}</span>}
-                              {f.aiSettings.grayscale && <span className="ai-tag">Grayscale</span>}
-                              {f.aiSettings.summary && <span className="ai-tag ai-summary">{f.aiSettings.summary}</span>}
-                            </div>
+                          {f.analyzing ? '...' : '✦ AI'}
+                        </button>
+                      </div>
+                      {f.aiSettings && !f.aiSettings.error && (
+                        <div className="ai-preview">
+                          <p className="ai-preview-title">✦ AI will apply:</p>
+                          <div className="ai-tags">
+                            {f.aiSettings.quality > 0 && <span className="ai-tag">Quality: {f.aiSettings.quality}%</span>}
+                            {f.aiSettings.width && f.aiSettings.height && <span className="ai-tag">{f.aiSettings.width}×{f.aiSettings.height}px</span>}
+                            {f.aiSettings.max_size_kb && <span className="ai-tag">Max: {f.aiSettings.max_size_kb}KB</span>}
+                            {f.aiSettings.dpi && <span className="ai-tag">DPI: {f.aiSettings.dpi}</span>}
+                            {f.aiSettings.grayscale && <span className="ai-tag">Grayscale</span>}
+                            {f.aiSettings.summary && <span className="ai-tag ai-summary">{f.aiSettings.summary}</span>}
                           </div>
-                        )}
-                        {f.aiSettings?.error && <p className="ai-error">{f.aiSettings.error}</p>}
-                      </div>
-                    ) : (
-                      <div className="merge-order">
-                        <div className="merge-arrows">
-                          <button className="arrow-btn" onClick={() => moveFile(index, -1)} disabled={index === 0}>↑</button>
-                          <span className="merge-num">{index + 1}</span>
-                          <button className="arrow-btn" onClick={() => moveFile(index, 1)} disabled={index === files.length - 1}>↓</button>
                         </div>
-                        <div className="file-info">
-                          <p className="file-name">{f.file.name}</p>
-                          <p className="file-meta">{fmtSize(f.file.size)}</p>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                      {f.aiSettings?.error && (
+                        <p className="ai-error">{f.aiSettings.error}</p>
+                      )}
+                    </div>
                     <div className="file-right">
                       <div className={`status-badge ${f.status}`}>
                         {f.status === 'pending' && '○ Pending'}
@@ -351,7 +279,11 @@ async function startMerge() {
                         {f.status === 'error' && '✕ Error'}
                       </div>
                       {f.status === 'done' && f.downloadUrl && (
-                        <a className="download-btn" href={f.downloadUrl} download={f.outputName}>
+                        
+                          <a className="download-btn"
+                          href={f.downloadUrl}
+                          download={f.outputName}
+                        >
                           ↓ Download {f.convertedSize ? `(${fmtSize(f.convertedSize)})` : ''}
                         </a>
                       )}
@@ -363,19 +295,11 @@ async function startMerge() {
             </div>
 
             <div className="bottom-row">
-              {mode === 'convert' ? (
-                <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
-                  {converting
-                    ? <><span className="spin">◌</span> Converting…</>
-                    : <><span>⚡</span> Convert all</>}
-                </button>
-              ) : (
-                <button className="convert-btn" onClick={startMerge} disabled={converting || files.length < 2}>
-                  {converting
-                    ? <><span className="spin">◌</span> Merging…</>
-                    : <><span>⊞</span> Merge {files.length} files into PDF</>}
-                </button>
-              )}
+              <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
+                {converting
+                  ? <><span className="spin">◌</span> Converting…</>
+                  : <><span>⚡</span> Convert all</>}
+              </button>
 
               <div className="stats">
                 <div className="stat">
