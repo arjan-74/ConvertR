@@ -384,3 +384,42 @@ body {
 }
 .clear-btn:hover { background: rgba(239,68,68,0.1); }
 .clear-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 2rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 4px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mode-btn {
+  padding: 9px 28px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #777;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  position: relative;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(99,102,241,0.4);
+}
+
+.mode-btn:not(.active):hover {
+  color: #ccc;
+  background: rgba(255,255,255,0.04);
+}
