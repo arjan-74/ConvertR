@@ -42,6 +42,7 @@ export default function App() {
   const [dragOver, setDragOver] = useState(false)
   const [mode, setMode] = useState('convert')
   const inputRef = useRef()
+  const [mergeResult, setMergeResult] = useState(null)
 
   function addFiles(newFiles) {
     const entries = Array.from(newFiles).map(f => ({
@@ -83,6 +84,7 @@ export default function App() {
   async function startMerge() {
     if (files.length < 2 || converting) return
     setConverting(true)
+    setMergeResult(null)
     try {
       const formData = new FormData()
       files.forEach(f => formData.append('files', f.file))
@@ -93,12 +95,7 @@ export default function App() {
       })
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'merged.pdf'
-      a.click()
-      window.URL.revokeObjectURL(url)
-      setFiles(prev => prev.map(f => ({ ...f, status: 'done' })))
+      setMergeResult({ url, size: blob.size })
     } catch (err) {
       console.error('Merge failed:', err)
     }
@@ -365,6 +362,12 @@ export default function App() {
                                   ? <><span className="spin">◌</span> Merging…</>
                                   : <><span>⊞</span> Merge into PDF</>}
                               </button>
+                               {mergeResult && (
+                                  <a className="download-btn" href={mergeResult.url} download="merged.pdf">
+                                    ↓ Download ({fmtSize(mergeResult.size)})
+                                  </a>
+                                )}
+                              </>
                             )}
 
               <div className="stats">
