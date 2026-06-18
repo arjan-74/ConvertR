@@ -279,48 +279,56 @@ export default function App() {
                       <p className="file-name">{f.file.name}</p>
                       <p className="file-meta">{fmtSize(f.file.size)}</p>
                     </div>
-                    <div className="file-controls">
-                                          <select
-                                            className="format-select"
-                                            value={f.format}
-                                            disabled={converting}
-                                            onChange={e => updateFormat(f.id, e.target.value)}
-                                          >
-                                            {opts.map(o => <option key={o}>{o}</option>)}
-                                          </select>
-                                          <div className="spec-row">
-                                            <input
-                                              className="spec-input"
-                                              placeholder='AI spec: "compress to 500KB", "make 1080p"'
-                                              value={f.spec}
+                    {mode === 'convert' ? (
+                                          <div className="file-controls">
+                                            <select
+                                              className="format-select"
+                                              value={f.format}
                                               disabled={converting}
-                                              onChange={e => updateSpec(f.id, e.target.value)}
-                                            />
-                                            <button
-                                              className="analyze-btn"
-                                              onClick={() => analyzeSpec(f.id)}
-                                              disabled={converting || !f.spec.trim() || f.analyzing}
+                                              onChange={e => updateFormat(f.id, e.target.value)}
                                             >
-                                              {f.analyzing ? '...' : '✦ AI'}
-                                            </button>
-                                          </div>
-                                          {f.aiSettings && !f.aiSettings.error && (
-                                            <div className="ai-preview">
-                                              <p className="ai-preview-title">✦ AI will apply:</p>
-                                              <div className="ai-tags">
-                                                {f.aiSettings.quality > 0 && <span className="ai-tag">Quality: {f.aiSettings.quality}%</span>}
-                                                {f.aiSettings.width && f.aiSettings.height && <span className="ai-tag">{f.aiSettings.width}×{f.aiSettings.height}px</span>}
-                                                {f.aiSettings.max_size_kb && <span className="ai-tag">Max: {f.aiSettings.max_size_kb}KB</span>}
-                                                {f.aiSettings.dpi && <span className="ai-tag">DPI: {f.aiSettings.dpi}</span>}
-                                                {f.aiSettings.grayscale && <span className="ai-tag">Grayscale</span>}
-                                                {f.aiSettings.summary && <span className="ai-tag ai-summary">{f.aiSettings.summary}</span>}
-                                              </div>
+                                              {opts.map(o => <option key={o}>{o}</option>)}
+                                            </select>
+                                            <div className="spec-row">
+                                              <input
+                                                className="spec-input"
+                                                placeholder='AI spec: "compress to 500KB", "make 1080p"'
+                                                value={f.spec}
+                                                disabled={converting}
+                                                onChange={e => updateSpec(f.id, e.target.value)}
+                                              />
+                                              <button
+                                                className="analyze-btn"
+                                                onClick={() => analyzeSpec(f.id)}
+                                                disabled={converting || !f.spec.trim() || f.analyzing}
+                                              >
+                                                {f.analyzing ? '...' : '✦ AI'}
+                                              </button>
                                             </div>
-                                          )}
-                                          {f.aiSettings?.error && (
-                                            <p className="ai-error">{f.aiSettings.error}</p>
-                                          )}
-                                        </div>
+                                            {f.aiSettings && !f.aiSettings.error && (
+                                              <div className="ai-preview">
+                                                <p className="ai-preview-title">✦ AI will apply:</p>
+                                                <div className="ai-tags">
+                                                  {f.aiSettings.quality > 0 && <span className="ai-tag">Quality: {f.aiSettings.quality}%</span>}
+                                                  {f.aiSettings.width && f.aiSettings.height && <span className="ai-tag">{f.aiSettings.width}×{f.aiSettings.height}px</span>}
+                                                  {f.aiSettings.max_size_kb && <span className="ai-tag">Max: {f.aiSettings.max_size_kb}KB</span>}
+                                                  {f.aiSettings.dpi && <span className="ai-tag">DPI: {f.aiSettings.dpi}</span>}
+                                                  {f.aiSettings.grayscale && <span className="ai-tag">Grayscale</span>}
+                                                  {f.aiSettings.summary && <span className="ai-tag ai-summary">{f.aiSettings.summary}</span>}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {f.aiSettings?.error && (
+                                              <p className="ai-error">{f.aiSettings.error}</p>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="merge-order">
+                                            <button className="arrow-btn" onClick={() => moveFile(files.indexOf(f), -1)} disabled={files.indexOf(f) === 0}>↑</button>
+                                            <span className="merge-num">#{files.indexOf(f) + 1}</span>
+                                            <button className="arrow-btn" onClick={() => moveFile(files.indexOf(f), 1)} disabled={files.indexOf(f) === files.length - 1}>↓</button>
+                                          </div>
+                                        )}
                     <div className="file-right">
                       <div className={`status-badge ${f.status}`}>
                         {f.status === 'pending' && '○ Pending'}
@@ -345,11 +353,19 @@ export default function App() {
             </div>
 
             <div className="bottom-row">
-              <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
-                {converting
-                  ? <><span className="spin">◌</span> Converting…</>
-                  : <><span>⚡</span> Convert all</>}
-              </button>
+              {mode === 'convert' ? (
+                              <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
+                                {converting
+                                  ? <><span className="spin">◌</span> Converting…</>
+                                  : <><span>⚡</span> Convert all</>}
+                              </button>
+                            ) : (
+                              <button className="convert-btn" onClick={startMerge} disabled={converting || files.length < 2}>
+                                {converting
+                                  ? <><span className="spin">◌</span> Merging…</>
+                                  : <><span>⊞</span> Merge into PDF</>}
+                              </button>
+                            )}
 
               <div className="stats">
                 <div className="stat">
