@@ -296,3 +296,64 @@ async def merge(
 
     except Exception as e:
         return JSONResponse({"error": f"Merge failed: {str(e)}"})
+    
+    @app.post("/preview-pages")
+async def preview_pages(files: list[UploadFile] = File(...)):
+    tmp_dir = tempfile.mkdtemp()
+    pages_info = []
+
+    try:
+        for file in files:
+            input_path = os.path.join(tmp_dir, file.filename)
+            with open(input_path, "wb") as f:
+                f.write(await file.read())
+
+            ext = file.filename.split(".")[-1].lower()
+
+            if ext in {'png', 'jpg', 'jpeg', 'webp', 'bmp'}:
+                pages_info.append({
+                    "filename": file.filename,
+                    "page_num": 0,
+                    "total_pages": 1
+                })
+            elif ext == 'pdf':
+                doc = fitz.open(input_path)
+                num_pages = len(doc)
+                for i in range(num_pages):
+                    pages_info.append({
+                        "filename": file.filename,
+                        "page_num": i,
+                        "total_pages": num_pages
+                    })
+                doc.close()
+
+        return JSONResponse({"pages": pages_info})
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
+
+@app.post("/page-thumbnail")
+async def page_thumbnail(file: UploadFile = File(...), page_num: int = Form(0)):
+    tmp_dir = tempfile.mkdtemp()
+    input_path = os.path.join(tmp_dir, file.filename)
+    with open(input_path, "wb") as f:
+        f.write(await file.read())
+
+    ext = file.filename.split(".")[-1].lower()
+    thumb_path = os.path.join(tmp_dir, "thumb.png")
+
+    try:
+        if ext in {'png', 'jpg', 'jpeg', 'webp', 'bmp'}:
+            img = Image.open(input_path)
+            img.thumbnail((300, 300))
+            img.save(thumb_path, "PNG")
+        elif ext == 'pdf':
+            doc = fitz.open(input_path)
+            page = doc[page_num]
+            pix = page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
+            pix.save(thumb_path)
+            doc.close()
+
+        return FileResponse(thumb_path, media_type="image/png")
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
