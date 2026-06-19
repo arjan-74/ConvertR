@@ -252,7 +252,7 @@ export default function App() {
         {files.length > 0 && (
           <div className="queue-wrap">
             <div className="queue-title-row">
-              <p className="queue-title">Conversion queue</p>
+              <p className="queue-title">{mode === 'convert' ? 'Conversion queue' : 'Merge queue'}</p>
               <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
                 <span className="queue-count">{files.length} file{files.length !== 1 ? 's' : ''}</span>
                 <button className="clear-btn" onClick={() => setFiles([])} disabled={converting}>
@@ -351,24 +351,25 @@ export default function App() {
 
             <div className="bottom-row">
               {mode === 'convert' ? (
-                              <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
-                                {converting
-                                  ? <><span className="spin">◌</span> Converting…</>
-                                  : <><span>⚡</span> Convert all</>}
-                              </button>
-                            ) : (
-                              <button className="convert-btn" onClick={startMerge} disabled={converting || files.length < 2}>
-                                {converting
-                                  ? <><span className="spin">◌</span> Merging…</>
-                                  : <><span>⊞</span> Merge into PDF</>}
-                              </button>
-                               {mergeResult && (
-                                  <a className="download-btn" href={mergeResult.url} download="merged.pdf">
-                                    ↓ Download ({fmtSize(mergeResult.size)})
-                                  </a>
-                                )}
-                              </>
-                            )}
+                <button className="convert-btn" onClick={startConversion} disabled={converting || files.length === 0}>
+                  {converting
+                    ? <><span className="spin">◌</span> Converting…</>
+                    : <><span>⚡</span> Convert all</>}
+                </button>
+              ) : (
+                <>
+                  <button className="convert-btn" onClick={startMerge} disabled={converting || files.length < 2}>
+                    {converting
+                      ? <><span className="spin">◌</span> Merging…</>
+                      : <><span>⊞</span> Merge into PDF</>}
+                  </button>
+                  {mergeResult && (
+                    <a className="download-btn" href={mergeResult.url} download="merged.pdf">
+                      ↓ Download ({fmtSize(mergeResult.size)})
+                    </a>
+                  )}
+                </>
+              )}
 
               <div className="stats">
                 <div className="stat">
