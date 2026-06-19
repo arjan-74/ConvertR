@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import './App.css'
 
 const formatOptions = {
@@ -43,6 +43,12 @@ export default function App() {
   const [mode, setMode] = useState('convert')
   const inputRef = useRef()
   const [mergeResult, setMergeResult] = useState(null)
+  const [pages, setPages] = useState([])
+  const [loadingPages, setLoadingPages] = useState(false)
+  
+  useEffect(() => {
+    loadPages()
+  }, [files.length, mode])
 
   function addFiles(newFiles) {
     const entries = Array.from(newFiles).map(f => ({
@@ -80,6 +86,67 @@ export default function App() {
       return arr
     })
   }
+
+  async function loadPages() {
+      if (mode !== 'merge' || files.length === 0) {
+        setPages([])
+        return
+      }
+      setLoadingPages(true)
+      try {
+        const formData = new FormData()
+        files.forEach(f => formData.append('files', f.file))
+        const response = await fetch('https://convertr-backend.onrender.com/preview-pages', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await response.json()
+        if (data.pages) {
+          const pagesWithThumbs = data.pages.map((p, idx) => ({
+            ...p,
+            id: `${p.filename}-${p.page_num}-${idx}`,
+            file: files.find(f => f.file.name === p.filename)?.file,
+            thumbUrl: null,
+          }))
+          setPages(pagesWithThumbs)
+          pagesWithThumbs.forEach(p => loadThumbnail(p))
+        }
+      } catch (err) {
+        console.error('Failed to load pages:', err)
+      }
+      setLoadingPages(false)
+    }
+
+    async function loadThumbnail(page) {
+      try {
+        const formData = new FormData()
+        formData.append('file', page.file)
+        formData.append('page_num', page.page_num)
+        const response = await fetch('https://convertr-backend.onrender.com/page-thumbnail', {
+          method: 'POST',
+          body: formData,
+        })
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        setPages(prev => prev.map(p => p.id === page.id ? { ...p, thumbUrl: url } : p))
+      } catch (err) {
+        console.error('Thumbnail failed:', err)
+      }
+    }
+
+    function deletePage(id) {
+      setPages(prev => prev.filter(p => p.id !== id))
+    }
+
+    function movePage(index, direction) {
+      setPages(prev => {
+        const arr = [...prev]
+        const temp = arr[index]
+        arr[index] = arr[index + direction]
+        arr[index + direction] = temp
+        return arr
+      })
+    }
 
   async function startMerge() {
     if (files.length < 2 || converting) return
@@ -326,6 +393,7 @@ export default function App() {
                                             <button className="arrow-btn" onClick={() => moveFile(files.indexOf(f), 1)} disabled={files.indexOf(f) === files.length - 1}>↓</button>
                                           </div>
                                         )}
+                                        
                     <div className="file-right">
                       <div className={`status-badge ${f.status}`}>
                         {f.status === 'pending' && '○ Pending'}
@@ -348,6 +416,33 @@ export default function App() {
                 )
               })}
             </div>
+
+            {mode === 'merge' && pages.length > 0 && (
+              <div className="page-grid-section">
+                <p className="section-label">Pages ({pages.length}) — use arrows to reorder, click ✕ to remove</p>
+                <div className="page-grid">
+                  {pages.map((p, idx) => (
+                    <div className="page-thumb" key={p.id}>
+                      <div className="page-thumb-img">
+                        {p.thumbUrl ? (
+                          <img src={p.thumbUrl} alt={`Page ${idx + 1}`} />
+                        ) : (
+                          <div className="page-thumb-loading">...</div>
+                        )}
+                      </div>
+                      <div className="page-thumb-footer">
+                        <span className="page-num-badge">{idx + 1}</span>
+                        <div className="page-thumb-actions">
+                          <button className="page-mini-btn" onClick={() => movePage(idx, -1)} disabled={idx === 0}>←</button>
+                          <button className="page-mini-btn" onClick={() => movePage(idx, 1)} disabled={idx === pages.length - 1}>→</button>
+                          <button className="page-mini-btn delete" onClick={() => deletePage(p.id)}>✕</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bottom-row">
               {mode === 'convert' ? (
