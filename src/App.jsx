@@ -46,9 +46,9 @@ export default function App() {
   const [pages, setPages] = useState([])
   const [loadingPages, setLoadingPages] = useState(false)
   
-  useEffect(() => {
-    loadPages()
-  }, [files.length, mode])
+  //useEffect(() => {
+  //    loadPages()
+  //  }, [files.length, mode])
 
   function addFiles(newFiles) {
     const entries = Array.from(newFiles).map(f => ({
@@ -61,6 +61,7 @@ export default function App() {
       outputName: null,
       analyzing: false,
       aiSettings: null,
+      progress: 0,
     }))
     setFiles(prev => [...prev, ...entries])
   }
@@ -202,8 +203,17 @@ export default function App() {
     await new Promise(r => setTimeout(r, 3000))
 
     for (let i = 0; i < files.length; i++) {
-      const f = files[i]
-      setFiles(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'converting' } : item))
+          const f = files[i]
+          setFiles(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'converting', progress: 5 } : item))
+
+          const progressInterval = setInterval(() => {
+            setFiles(prev => prev.map((item, idx) => {
+              if (idx === i && item.progress < 90) {
+                return { ...item, progress: item.progress + Math.random() * 15 }
+              }
+              return item
+            }))
+          }, 400)
 
       try {
         const formData = new FormData()
@@ -233,14 +243,16 @@ export default function App() {
         const outputName = baseName + '.' + f.format.toLowerCase()
         const convertedSize = blob.size
 
-        setFiles(prev => prev.map((item, idx) => idx === i
-          ? { ...item, status: 'done', downloadUrl, outputName, convertedSize }
-          : item
-        ))
-      } catch (err) {
-        setFiles(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'error' } : item))
-      }
-    }
+        clearInterval(progressInterval)
+                setFiles(prev => prev.map((item, idx) => idx === i
+                  ? { ...item, status: 'done', downloadUrl, outputName, convertedSize, progress: 100 }
+                  : item
+                ))
+              } catch (err) {
+                clearInterval(progressInterval)
+                setFiles(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'error', progress: 0 } : item))
+              }
+            }
 
     setConverting(false)
   }
@@ -397,10 +409,15 @@ export default function App() {
                     <div className="file-right">
                       <div className={`status-badge ${f.status}`}>
                         {f.status === 'pending' && '○ Pending'}
-                        {f.status === 'converting' && '◌ Converting'}
+                        {f.status === 'converting' && `◌ ${Math.round(f.progress)}%`}
                         {f.status === 'done' && '✓ Done'}
                         {f.status === 'error' && '✕ Error'}
                       </div>
+                      {f.status === 'converting' && (
+                        <div className="file-progress-track">
+                          <div className="file-progress-fill" style={{ width: `${f.progress}%` }} />
+                        </div>
+                      )}
                       {f.status === 'done' && f.downloadUrl && (
                         
                           <a className="download-btn"
@@ -417,7 +434,7 @@ export default function App() {
               })}
             </div>
 
-            {mode === 'merge' && pages.length > 0 && (
+            {/*{mode === 'merge' && pages.length > 0 && (
               <div className="page-grid-section">
                 <p className="section-label">Pages ({pages.length}) — use arrows to reorder, click ✕ to remove</p>
                 <div className="page-grid">
@@ -442,7 +459,7 @@ export default function App() {
                   ))}
                 </div>
               </div>
-            )}
+            )}*/}
 
             <div className="bottom-row">
               {mode === 'convert' ? (

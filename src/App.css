@@ -515,3 +515,19 @@ body {
 .page-mini-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 .page-mini-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .page-mini-btn.delete:hover { background: rgba(239,68,68,0.2); color: #f87171; }
+
+.file-progress-track {
+  width: 80px;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.file-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
