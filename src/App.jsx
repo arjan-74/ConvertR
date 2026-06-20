@@ -25,6 +25,15 @@ const typeMeta = {
   aud: { label: 'AUD', bg: '#ede9fe', color: '#6d28d9', icon: '🎵' },
 }
 
+const [presets, setPresets] = useState([
+    { name: 'Web optimized', format: 'WebP', spec: 'compress to under 200KB, high quality' },
+    { name: 'Print quality', format: 'PDF', spec: 'high resolution, 300 DPI' },
+    { name: 'Email attachment', format: 'PDF', spec: 'compress to under 5MB' },
+  ])
+
+const [showPresetInput, setShowPresetInput] = useState(false)
+const [newPresetName, setNewPresetName] = useState('')
+
 function getType(name) {
   const ext = name.split('.').pop().toLowerCase()
   return extMap[ext] || 'doc'
@@ -77,6 +86,21 @@ export default function App() {
 
   function updateFormat(id, val) {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, format: val } : f))
+  }
+
+  function applyPreset(fileId, preset) {
+    setFiles(prev => prev.map(f => f.id === fileId
+      ? { ...f, format: preset.format, spec: preset.spec, aiSettings: null }
+      : f
+    ))
+  }
+
+  function savePreset(fileId) {
+    const f = files.find(item => item.id === fileId)
+    if (!f || !newPresetName.trim()) return
+    setPresets(prev => [...prev, { name: newPresetName, format: f.format, spec: f.spec }])
+    setNewPresetName('')
+    setShowPresetInput(false)
   }
 
   function moveFile(index, direction) {
@@ -371,6 +395,54 @@ export default function App() {
                                             >
                                               {opts.map(o => <option key={o}>{o}</option>)}
                                             </select>
+
+                                            <div className="preset-chips">
+                          {presets.map((p, idx) => (
+                            <button
+                              key={idx}
+                              className="preset-chip"
+                              onClick={() => applyPreset(f.id, p)}
+                              disabled={converting}
+                            >
+                              {p.name}
+                            </button>
+                          ))}
+                          <button
+                            className="preset-chip save"
+                            onClick={() => setShowPresetInput(f.id)}
+                            disabled={converting}
+                          >
+                            + Save current
+                          </button>
+                        </div>
+                        {showPresetInput === f.id && (
+                          <div className="preset-save-row">
+                            <input
+                              className="preset-name-input"
+                              placeholder="Preset name"
+                              value={newPresetName}
+                              onChange={e => setNewPresetName(e.target.value)}
+                            />
+                            <button className="preset-confirm-btn" onClick={() => savePreset(f.id)}>Save</button>
+                          </div>
+                        )}
+                        <div className="spec-row">
+                          <input
+                            className="spec-input"
+                            placeholder='AI spec: "compress to 500KB", "make 1080p"'
+                            value={f.spec}
+                            disabled={converting}
+                            onChange={e => updateSpec(f.id, e.target.value)}
+                          />
+                          <button
+                            className="analyze-btn"
+                            onClick={() => analyzeSpec(f.id)}
+                            disabled={converting || !f.spec.trim() || f.analyzing}
+                          >
+                            {f.analyzing ? '...' : '✦ AI'}
+                          </button>
+                        </div>
+                        
                                             <div className="spec-row">
                                               <input
                                                 className="spec-input"

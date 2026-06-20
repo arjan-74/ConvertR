@@ -637,3 +637,58 @@ body {
   background: rgba(255,255,255,0.6);
   border: 1px solid rgba(0,0,0,0.1);
 }
+
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.preset-chip {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.preset-chip:hover { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3); color: #818cf8; }
+.preset-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.preset-chip.save {
+  border-style: dashed;
+  color: #818cf8;
+}
+
+.preset-save-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.preset-name-input {
+  flex: 1;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #ccc;
+  outline: none;
+}
+
+.preset-confirm-btn {
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(99,102,241,0.2);
+  color: #818cf8;
+  cursor: pointer;
+  font-weight: 600;
+}
