@@ -442,23 +442,8 @@ export default function App() {
                             {f.analyzing ? '...' : '✦ AI'}
                           </button>
                         </div>
-                        
-                                            <div className="spec-row">
-                                              <input
-                                                className="spec-input"
-                                                placeholder='AI spec: "compress to 500KB", "make 1080p"'
-                                                value={f.spec}
-                                                disabled={converting}
-                                                onChange={e => updateSpec(f.id, e.target.value)}
-                                              />
-                                              <button
-                                                className="analyze-btn"
-                                                onClick={() => analyzeSpec(f.id)}
-                                                disabled={converting || !f.spec.trim() || f.analyzing}
-                                              >
-                                                {f.analyzing ? '...' : '✦ AI'}
-                                              </button>
-                                            </div>
+
+                                            
                                             {f.aiSettings && !f.aiSettings.error && (
                                               <div className="ai-preview">
                                                 <p className="ai-preview-title">✦ AI will apply:</p>
