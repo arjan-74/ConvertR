@@ -25,15 +25,6 @@ const typeMeta = {
   aud: { label: 'AUD', bg: '#ede9fe', color: '#6d28d9', icon: '🎵' },
 }
 
-const [presets, setPresets] = useState([
-    { name: 'Web optimized', format: 'WebP', spec: 'compress to under 200KB, high quality' },
-    { name: 'Print quality', format: 'PDF', spec: 'high resolution, 300 DPI' },
-    { name: 'Email attachment', format: 'PDF', spec: 'compress to under 5MB' },
-  ])
-
-const [showPresetInput, setShowPresetInput] = useState(false)
-const [newPresetName, setNewPresetName] = useState('')
-
 function getType(name) {
   const ext = name.split('.').pop().toLowerCase()
   return extMap[ext] || 'doc'
@@ -55,7 +46,14 @@ export default function App() {
   const [pages, setPages] = useState([])
   const [loadingPages, setLoadingPages] = useState(false)
   const [theme, setTheme] = useState('dark')
-  
+  const [presets, setPresets] = useState([
+      { name: 'Web optimized', format: 'WebP', spec: 'compress to under 200KB, high quality' },
+      { name: 'Print quality', format: 'PDF', spec: 'high resolution, 300 DPI' },
+      { name: 'Email attachment', format: 'PDF', spec: 'compress to under 5MB' },
+    ])
+  const [showPresetInput, setShowPresetInput] = useState(false)
+  const [newPresetName, setNewPresetName] = useState('')
+
   //useEffect(() => {
   //    loadPages()
   //  }, [files.length, mode])
@@ -442,8 +440,8 @@ export default function App() {
                             {f.analyzing ? '...' : '✦ AI'}
                           </button>
                         </div>
-
-                                            
+                        
+                                          
                                             {f.aiSettings && !f.aiSettings.error && (
                                               <div className="ai-preview">
                                                 <p className="ai-preview-title">✦ AI will apply:</p>
