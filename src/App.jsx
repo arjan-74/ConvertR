@@ -45,6 +45,7 @@ export default function App() {
   const [mergeResult, setMergeResult] = useState(null)
   const [pages, setPages] = useState([])
   const [loadingPages, setLoadingPages] = useState(false)
+  const [theme, setTheme] = useState('dark')
   
   //useEffect(() => {
   //    loadPages()
@@ -261,7 +262,7 @@ export default function App() {
   const pct = files.length > 0 ? Math.round((done / files.length) * 100) : 0
 
   return (
-    <div className="app">
+    <div className={`app ${theme}`}>
       <div className="blob blob-1" />
       <div className="blob blob-2" />
       <div className="blob blob-3" />
@@ -273,7 +274,12 @@ export default function App() {
             <span className="logo-text">Convertr</span>
             <span className="logo-suffix">.app</span>
           </div>
-          <span className="beta-pill">beta</span>
+          <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+            <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <span className="beta-pill">beta</span>
+          </div>
         </header>
 
         <div className="hero">

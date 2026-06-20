@@ -531,3 +531,94 @@ body {
   border-radius: 2px;
   transition: width 0.3s ease;
 }
+
+.theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.theme-toggle:hover { background: rgba(255,255,255,0.08); }
+
+/* Light theme overrides */
+.app.light {
+  background: #f8f9fc;
+}
+
+.app.light .header-left .logo-text,
+.app.light .hero-title {
+  color: #1a1a2e;
+}
+
+.app.light .hero-sub,
+.app.light .drop-sub,
+.app.light .type-pill,
+.app.light .stat-lbl {
+  color: #666;
+}
+
+.app.light .drop-zone {
+  background: rgba(0,0,0,0.02);
+  border-color: rgba(0,0,0,0.1);
+}
+
+.app.light .drop-zone:hover {
+  background: rgba(99,102,241,0.04);
+}
+
+.app.light .drop-label {
+  color: #1a1a2e;
+}
+
+.app.light .queue-wrap {
+  background: rgba(0,0,0,0.02);
+  border-color: rgba(0,0,0,0.08);
+}
+
+.app.light .queue-title,
+.app.light .file-name,
+.app.light .stat-num {
+  color: #1a1a2e;
+}
+
+.app.light .queue-card {
+  background: rgba(255,255,255,0.8);
+  border-color: rgba(0,0,0,0.06);
+}
+
+.app.light .file-meta {
+  color: #888;
+}
+
+.app.light .format-select,
+.app.light .spec-input {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+  color: #1a1a2e;
+}
+
+.app.light .theme-toggle {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.1);
+}
+
+.app.light .mode-toggle {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+}
+
+.app.light .mode-btn {
+  color: #888;
+}
+
+.app.light .blob {
+  opacity: 0.08;
+}
